@@ -1,26 +1,23 @@
-// ============ RCON Configuration ========== //
-const serverIp ="localhost";
-const rconPort = 28016;
-const rconPassword = "";
-// ========================================== //
+require('dotenv').config();
 var WebSocketClient = require('websocket').client;
 var express = require('express');
 var app = express();
 var expressWs = require('express-ws')(app);
 const basicAuth = require('express-basic-auth')
-const connectionString = `ws://${serverIp}:${rconPort}/${rconPassword}`;
+const connectionString = `ws://${process.env.SERVER_IP}:${process.env.RCON_PORT}/${process.env.RCON_PASSWORD}`;
+
+let users = {};
+users[process.env.DEFAULT_USER] = process.env.DEFAULT_PASSWORD; // Add Default User
 
 app.use(basicAuth({
     challenge: true,
-    users: {
-        'admin': 'sup3rs3cr3tpassw0rd'
-    }
+    users: users
 }))
 
 app.use(express.static('public'));
 
-app.listen(8050, function () {
-    console.log('Server listening on port 8050! (http://localhost:8050/)');
+app.listen(process.env.WEBSERVER_PORT, function () {
+    console.log('Server listening on port ' + process.env.WEBSERVER_PORT + '! (http://localhost:' + process.env.WEBSERVER_PORT + '/)');
 });
 
 app.ws("/", function(ws, req){
@@ -38,7 +35,7 @@ app.ws("/", function(ws, req){
 });
 var aWss = expressWs.getWss('/');
 
-var client = new WebSocketClient();
+var wsclient = new WebSocketClient();
 var gConn;
 var Callbacks = {};
 var LastIndex = 1001;
@@ -133,20 +130,30 @@ function getPlayers(scope, success){
     });
 }
 
-client.on('connectFailed', function(error) {
+wsclient.on('connectFailed', function(error) {
     console.log('Connect Error: ' + error.toString());
+    setTimeout(() => {
+        wsclient = new WebSocketClient();
+        wsclient.connect(connectionString);
+    }, 5000);
 });
 
-client.on('connect', function(connection) {
+wsclient.on('connect', function(connection) {
     gConn = connection;
     console.log('Connected to Rust Server');
     connection.on('error', function(error) {
         console.log("Connection Error: " + error.toString());
-        setTimeout(client.connect(connectionString), 5000);
+        setTimeout(() => {
+            wsclient = new WebSocketClient();
+            wsclient.connect(connectionString);
+        }, 5000);
     });
     connection.on('close', function() {
         console.log('Connection to Rust Server Closed');
-        setTimeout(client.connect(connectionString), 2000);
+        setTimeout(() => {
+            wsclient = new WebSocketClient();
+            wsclient.connect(connectionString);
+        }, 2000);
     });
     connection.on('message', function(message) {
         var data = JSON.parse(message.utf8Data);
@@ -203,27 +210,4 @@ function logConnect(string){
 function logDisconnect(string){
     console.log('\x1b[2m\x1b[31m%s\x1b[0m', "[Disconnect] "+string);
 }
-
-// Logging
-
-function logUnknownKill(victim, killer){ // "died"
-
-}
-
-function logPveKill(victim, killer){ // Klammern hinten am Namen (Bear) 
-
-}
-
-function logPvpKill(victim, killer){ //"// was killed by"
-
-}
-
-function logSuicide(victim, reason){  // suicide
-
-}
-
-// Virtuelle Spieler z.b. Zombies haben den Folgenden Syntax 1234567[1234567]
-
-// End Logging
-
-client.connect(connectionString);
+wsclient.connect(connectionString);

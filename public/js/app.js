@@ -1,5 +1,6 @@
 let players = {};
 map.attributionControl.addAttribution('<a href="https://plebmasters.de/">PlebMasters.de</a>');
+map.attributionControl.addAttribution('<a href="https://github.com/MrNeta/Rust-RCON-LiveMap">GitHub</a>');
 const url = (window.location.protocol.includes("s") ? "wss" : "ws") + "://" + window.location.host + "/";
 
 function processMarker(data){
