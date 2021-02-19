@@ -1,0 +1,120 @@
+<head>
+    <title>Rust Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/leaflet-sidebar.min.css" />
+    <style>
+        body {
+            margin: 0;
+        }
+        #map { 
+            height: 100%;
+            background-color: #294159;
+        }
+        .sidebar-tabs-btn {
+            padding-top: 20px;
+        }
+        .sidebar-close-btn {
+            padding-top: 11px;
+        }
+
+        .sidebar-content{
+            font-family: Arial, Helvetica, sans-serif;
+        }
+        .log-entry {
+            border-bottom: 1px solid #2f2f2f;
+            color: #a0a0a0;
+            transition: all 0.1s;
+            padding: 2px 0 2px 0;
+        }
+        .log-entry:hover {
+            color: white;
+            background-color: #272727;
+        }
+
+        .plr-table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 5px;
+        }
+        .plr-table, .plr-table  th, .plr-table > tr > td {
+            border: solid rgba(0,0,0, 0.1) 1px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div id="sidebar" class="sidebar collapsed">
+        <!-- Nav tabs -->
+        <div class="sidebar-tabs">
+            <ul role="tablist">
+                <li class="sidebar-tabs-btn"><a href="#home" role="tab" onclick="setTimeout(consoleScrollToBottom, 100)"><i class="fa fa-terminal"></i></a></li>
+                <li class="sidebar-tabs-btn"><a href="#profile" role="tab"><i class="fa fa-group"></i></a></li>
+                <!--<li class="sidebar-tabs-btn"><a href="https://github.com/Turbo87/sidebar-v2" role="tab" target="_blank"><i class="fa fa-github"></i></a></li> -->
+            </ul>
+
+            <!-- <ul role="tablist">
+                <li class="sidebar-tabs-btn"><a href="#settings" role="tab"><i class="fa fa-gear"></i></a></li>
+            </ul> -->
+        </div>
+
+        <!-- Tab panes -->
+        <div class="sidebar-content" id="sidebar-content">
+            <div class="sidebar-pane" id="home" style="background-color: rgb(0 0 0 / 90%);">
+                <h1 class="sidebar-header">
+                    Console
+                    <span class="sidebar-close sidebar-close-btn"><i class="fa fa-caret-left"></i></span>
+                </h1>
+                <div id="console-content"></div>
+            </div>
+
+            <div class="sidebar-pane" id="profile">
+                <h1 class="sidebar-header">
+                    Users
+                    <span class="sidebar-close sidebar-close-btn"><i class="fa fa-caret-left"></i></span>
+                </h1>
+                <table id="users-content" class="plr-table">
+                    <thead>
+                        <th>Name</th>
+                        <th>Connected</th>
+                        <th>Ping</th>
+                    </thead>
+                </table>
+            </div>
+
+            <div class="sidebar-pane" id="messages">
+                <h1 class="sidebar-header">Messages<span class="sidebar-close sidebar-close-btn"><i class="fa fa-caret-left"></i></span></h1>
+            </div>
+
+            <div class="sidebar-pane" id="settings">
+                <h1 class="sidebar-header">Settings<span class="sidebar-close sidebar-close-btn"><i class="fa fa-caret-left"></i></span></h1>
+            </div>
+        </div>
+    </div>
+
+    <div id="map"></div>
+    <script src="js/leaflet-sidebar.min.js"></script>
+    <script src="js/leaflet-time-widget.js"></script>
+    <script>
+        
+        let mapSize = 4250;
+        var bounds = [[-1 * (mapSize / 2),-1 * (mapSize / 2)], [(mapSize / 2),(mapSize / 2)]];
+        var image2 = L.imageOverlay('map_4250_1859812910.jpg', bounds)//.addTo(map);
+        var image = L.imageOverlay('map_4250_1859812910.png', bounds)//.addTo(map);
+        var map = L.map('map', {
+            crs: L.CRS.Simple,
+            minZoom: -2,
+            maxZoom: 0,
+            layers: [image2, image]
+        });
+        L.control.layers({
+            "Simple": image2,
+            "Detailed": image
+        }, {}).addTo(map);
+        map.setView( [0,0], -2);
+        var sidebar = L.control.sidebar('sidebar').addTo(map);
+        L.control.worldtime({}).addTo(map);
+    </script>
+    <script src="js/app.js"></script>
+</body>
