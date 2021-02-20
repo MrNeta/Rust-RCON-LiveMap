@@ -12,10 +12,10 @@ app.use(cors())
 let users = {};
 users[process.env.DEFAULT_USER] = process.env.DEFAULT_PASSWORD; // Add Default User
 
-// app.use(basicAuth({
-//     challenge: true,
-//     users: users
-// }))
+app.use(basicAuth({
+    challenge: true,
+    users: users
+}))
 
 app.use(express.static('public'));
 
