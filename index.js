@@ -6,13 +6,16 @@ var expressWs = require('express-ws')(app);
 const basicAuth = require('express-basic-auth')
 const connectionString = `ws://${process.env.SERVER_IP}:${process.env.RCON_PORT}/${process.env.RCON_PASSWORD}`;
 
+var cors = require('cors')
+app.use(cors())
+
 let users = {};
 users[process.env.DEFAULT_USER] = process.env.DEFAULT_PASSWORD; // Add Default User
 
-app.use(basicAuth({
-    challenge: true,
-    users: users
-}))
+// app.use(basicAuth({
+//     challenge: true,
+//     users: users
+// }))
 
 app.use(express.static('public'));
 
@@ -32,6 +35,19 @@ app.ws("/", function(ws, req){
             data: lastPlayerInformation
         }))
     getLastLogEntries(50, ws);
+    ws.on('message', function(message){
+        Request(message, null, function(response){
+            try{
+                if(response.trim().length > 0)
+                    ws.send(JSON.stringify({
+                        type: 2,
+                        data: response
+                    }));
+            }catch(ex){
+                console.log(ex);
+            }
+        });
+    });
 });
 var aWss = expressWs.getWss('/');
 
@@ -40,6 +56,8 @@ var gConn;
 var Callbacks = {};
 var LastIndex = 1001;
 let serverinfo;
+let worldSize;
+let worldSeed;
 
 function Command(msg, identifier){
     if(identifier === null)
@@ -130,6 +148,16 @@ function getPlayers(scope, success){
     });
 }
 
+function getWorldInformation(){
+    Request("server.worldsize", null, function(response){
+        
+        worldSize = parseInt(response.toString().replace(/"/g, "").split(":")[1]);
+    });
+    Request("server.seed", null, function(response){
+        worldSeed = parseInt(response.toString().replace(/"/g, "").split(":")[1]);
+    });
+}
+
 wsclient.on('connectFailed', function(error) {
     console.log('Connect Error: ' + error.toString());
     setTimeout(() => {
@@ -192,6 +220,7 @@ wsclient.on('connect', function(connection) {
     if (connection.connected) {
         setInterval(getPlayers, 10000);
         setInterval(getServerInfiormation, 1000);
+        getWorldInformation();
     }
 });
 
