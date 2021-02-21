@@ -4,18 +4,23 @@ var express = require('express');
 var app = express();
 var expressWs = require('express-ws')(app);
 const basicAuth = require('express-basic-auth')
+const fs = require('fs');
 const connectionString = `ws://${process.env.SERVER_IP}:${process.env.RCON_PORT}/${process.env.RCON_PASSWORD}`;
 
-var cors = require('cors')
-app.use(cors())
+if(process.env.ALLOW_CORS == "true"){
+    var cors = require('cors')
+    app.use(cors())
+}
 
 let users = {};
 users[process.env.DEFAULT_USER] = process.env.DEFAULT_PASSWORD; // Add Default User
 
-app.use(basicAuth({
-    challenge: true,
-    users: users
-}))
+if(process.env.USE_BASIC_AUTH == "true"){
+    app.use(basicAuth({
+        challenge: true,
+        users: users
+    }));
+}
 
 app.use(express.static('public'));
 
@@ -36,19 +41,45 @@ app.ws("/", function(ws, req){
         }))
     getLastLogEntries(50, ws);
     ws.on('message', function(message){
-        Request(message, null, function(response){
-            try{
-                if(response.trim().length > 0)
-                    ws.send(JSON.stringify({
+        if(message.trim() == "world.rendermap"){
+            sendToAllWsUsers({
+                type: 5,
+                data: true
+            });
+            Request(message, function(response){
+                if(response.trim().includes("Saved map render")){
+                    sendToAllWsUsers({
+                        type: 5,
+                        data: true
+                    });
+                    sendToAllWsUsers({
                         type: 2,
                         data: response
-                    }));
-            }catch(ex){
-                console.log(ex);
-            }
-        });
+                    });
+                }
+            });
+        }else{
+            Request(message, function(response){
+                try{
+                    if(response.trim().length > 0)
+                        ws.send(JSON.stringify({
+                            type: 2,
+                            data: response
+                        }));
+                }catch(ex){
+                    console.log(ex);
+                }
+            });
+        }
     });
+    if(!checkIfMapImageExist()){
+        ws.send(JSON.stringify({
+            type: 5,
+            data: false
+        }))
+    }
 });
+
 var aWss = expressWs.getWss('/');
 
 var wsclient = new WebSocketClient();
@@ -72,10 +103,9 @@ function Command(msg, identifier){
     gConn.send(JSON.stringify(packet));
 }
 
-function Request(msg, scope, callback){
+function Request(msg, callback){
     LastIndex++;
     Callbacks[LastIndex] = {
-        scope: scope,
         callback: callback
     };
     Command(msg, LastIndex)
@@ -91,7 +121,7 @@ let lastPlayerData;
 let lastPlayerInformation;
 
 function getLastLogEntries(count, ws){
-    Request("console.tail " + count, null, function(response){
+    Request("console.tail " + count, function(response){
         JSON.parse(response).forEach(el => {
             ws.send(JSON.stringify({
                 type: 2,
@@ -102,8 +132,10 @@ function getLastLogEntries(count, ws){
 }
 
 function getServerInfiormation(){
-    Request("serverinfo", null, function(response){
+    Request("serverinfo", function(response){
         serverinfo = JSON.parse(response);
+        serverinfo.worldSize = worldSize;
+        serverinfo.worldSeed = worldSeed;
         sendToAllWsUsers({
             type: 3,
             data: serverinfo
@@ -111,9 +143,9 @@ function getServerInfiormation(){
     });
 }
 
-function getPlayers(scope, success){
+function getPlayers(){
     // playerlist // commands: https://www.corrosionhour.com/rust-admin-commands/
-    Request("server.playerlistpos", scope, function(response){
+    Request("server.playerlistpos", function(response){
         // console.log(response)
         var data = [];
         var resp = response.split("\n");
@@ -139,7 +171,7 @@ function getPlayers(scope, success){
         });
     });
 
-    Request("playerlist", null, function(response){
+    Request("playerlist", function(response){
         lastPlayerInformation = JSON.parse(response);
         sendToAllWsUsers({
             type: 4,
@@ -149,11 +181,11 @@ function getPlayers(scope, success){
 }
 
 function getWorldInformation(){
-    Request("server.worldsize", null, function(response){
+    Request("server.worldsize", function(response){
         
         worldSize = parseInt(response.toString().replace(/"/g, "").split(":")[1]);
     });
-    Request("server.seed", null, function(response){
+    Request("server.seed", function(response){
         worldSeed = parseInt(response.toString().replace(/"/g, "").split(":")[1]);
     });
 }
@@ -186,26 +218,14 @@ wsclient.on('connect', function(connection) {
     connection.on('message', function(message) {
         var data = JSON.parse(message.utf8Data);
         if(data.Identifier === 0){
-
-            if((""+data.Message).toLocaleLowerCase().includes("[chat]")){
-                logChat(data.Message);
-            }else if((""+data.Message).toLocaleLowerCase().includes("[team chat]")){
-                logTeamChat(data.Message);
-            }else if((""+data.Message).toLocaleLowerCase().includes(" joined ")){
-                logConnect(data.Message);
-            }else if((""+data.Message).toLocaleLowerCase().includes(" disconnecting:")){
-                logDisconnect(data.Message);
-            }else{
-                console.log(`[Log][${data.Type}] ${data.Message}`);
-            }
+            console.log(`[Log][${data.Type}] ${data.Message}`);
             sendToAllWsUsers({
                 type: 2,
                 data: data.Message
             });
         }else if(data.Identifier === -1) { // chat?
 
-        }
-        else if(data.Identifier in Callbacks){
+        }else if(data.Identifier in Callbacks){
             Callbacks[data.Identifier].callback(data.Message);
         }else{
             console.log("================ Unknown =================");
@@ -224,19 +244,13 @@ wsclient.on('connect', function(connection) {
     }
 });
 
-function logTeamChat(string){
-    console.log('\x1b[32m%s\x1b[0m', string);
+function checkIfMapImageExist(){
+    try {
+        return fs.existsSync("./public/map_" + worldSize + "_" + worldSeed + ".png");
+    } catch(err) {
+        console.error(err)
+    }
+    return false;
 }
 
-function logChat(string){
-    console.log('\x1b[36m%s\x1b[0m', string);
-}
-
-function logConnect(string){
-    console.log('\x1b[2m\x1b[32m%s\x1b[0m', "[Connect] "+string);
-}
-
-function logDisconnect(string){
-    console.log('\x1b[2m\x1b[31m%s\x1b[0m', "[Disconnect] "+string);
-}
 wsclient.connect(connectionString);
