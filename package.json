@@ -1,10 +1,12 @@
 {
-  "name": "rust_websocket_rcon_livemap",
+  "name": "rust_rcon_livemap",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node index.js",
+    "copy": "xcopy ui\\dist\\ dist\\public\\ /E/H/Y && xcopy example.env dist\\.env* /H/Y && xcopy index.js dist\\index.js* /H/Y && xcopy package.json dist\\package.json* /H/Y && xcopy package-lock.json dist\\package-lock.json* /H/Y && xcopy README_BUILT.md dist\\README.md* /H/Y",
+    "build": "cd ui && npm install && npm run build && cd .. && npm run copy"
   },
   "author": "MrNeta",
   "license": "ISC",

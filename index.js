@@ -193,7 +193,7 @@ function getWorldInformation(){
 wsclient.on('connectFailed', function(error) {
     console.log('Connect Error: ' + error.toString());
     setTimeout(() => {
-        wsclient = new WebSocketClient();
+        wsclient.abort();
         wsclient.connect(connectionString);
     }, 5000);
 });
@@ -204,14 +204,14 @@ wsclient.on('connect', function(connection) {
     connection.on('error', function(error) {
         console.log("Connection Error: " + error.toString());
         setTimeout(() => {
-            wsclient = new WebSocketClient();
+            wsclient.abort();
             wsclient.connect(connectionString);
         }, 5000);
     });
     connection.on('close', function() {
         console.log('Connection to Rust Server Closed');
         setTimeout(() => {
-            wsclient = new WebSocketClient();
+            wsclient.abort();
             wsclient.connect(connectionString);
         }, 2000);
     });
