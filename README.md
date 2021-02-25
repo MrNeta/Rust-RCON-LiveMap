@@ -1,4 +1,7 @@
 # Rust RCON LiveMap
+![Example Image](https://i.imgur.com/gpbVU88.jpeg)
+
+This project shows the live locations of all players on an overview map, you also have direct access to the current logs of the server and the possibility to send direct commands to the server via RCON.
 
 ## Usage
 
